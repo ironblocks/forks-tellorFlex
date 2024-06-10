@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.3;
 
+import "@ironblocks/firewall-consumer/contracts/FirewallConsumer.sol";
 import "../TellorFlex.sol";
 
-contract TestFlex is TellorFlex {
+contract TestFlex is FirewallConsumer, TellorFlex {
     constructor(
         address _token,
         uint256 _reportingLock,
@@ -13,14 +14,14 @@ contract TestFlex is TellorFlex {
         bytes32 _stakingTokenPriceQueryId
     ) TellorFlex(_token, _reportingLock, _stakeAmountDollarTarget, _stakingTokenPrice, _minimumStakeAmount, _stakingTokenPriceQueryId) {}
 
-    function updateRewards() external {
+    function updateRewards() external firewallProtected {
         _updateRewards();
     }
 
     function updateStakeAndPayRewards(
         address _stakerAddress,
         uint256 _newStakedBalance
-    ) external {
+    ) external firewallProtected {
         _updateStakeAndPayRewards(_stakerAddress, _newStakedBalance);
     }
 

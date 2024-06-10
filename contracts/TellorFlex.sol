@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.3;
 
+import "@ironblocks/firewall-consumer/contracts/FirewallConsumer.sol";
 import "./interfaces/IERC20.sol";
 
 /**
@@ -11,7 +12,7 @@ import "./interfaces/IERC20.sol";
  * by a single address known as 'governance', which could be an externally owned
  * account or a contract, allowing for a flexible, modular design.
 */
-contract TellorFlex {
+contract TellorFlex is FirewallConsumer {
     // Storage
     IERC20 public immutable token; // token used for staking and rewards
     address public governance; // address with ability to remove values and slash reporters
@@ -115,7 +116,7 @@ contract TellorFlex {
      * @dev Allows the owner to initialize the governance (flex addy needed for governance deployment)
      * @param _governanceAddress address of governance contract (github.com/tellor-io/governance)
      */
-    function init(address _governanceAddress) external {
+    function init(address _governanceAddress) external firewallProtected {
         require(msg.sender == owner, "only owner can set governance address");
         require(governance == address(0), "governance address already set");
         require(
@@ -129,7 +130,7 @@ contract TellorFlex {
      * @dev Funds the Flex contract with staking rewards (paid by autopay and minting)
      * @param _amount amount of tokens to fund contract with
      */
-    function addStakingRewards(uint256 _amount) external {
+    function addStakingRewards(uint256 _amount) external firewallProtected {
         require(token.transferFrom(msg.sender, address(this), _amount));
         _updateRewards();
         stakingRewardsBalance += _amount;
@@ -146,7 +147,7 @@ contract TellorFlex {
      * @dev Allows a reporter to submit stake
      * @param _amount amount of tokens to stake
      */
-    function depositStake(uint256 _amount) external {
+    function depositStake(uint256 _amount) external firewallProtected {
         require(governance != address(0), "governance address not set");
         StakeInfo storage _staker = stakerDetails[msg.sender];
         uint256 _stakedBalance = _staker.stakedBalance;
@@ -199,7 +200,7 @@ contract TellorFlex {
      * @param _queryId is ID of the specific data feed
      * @param _timestamp is the timestamp of the data value to remove
      */
-    function removeValue(bytes32 _queryId, uint256 _timestamp) external {
+    function removeValue(bytes32 _queryId, uint256 _timestamp) external firewallProtected {
         require(msg.sender == governance, "caller must be governance address");
         Report storage _report = reports[_queryId];
         require(!_report.isDisputed[_timestamp], "value already disputed");
@@ -214,7 +215,7 @@ contract TellorFlex {
      * @dev Allows a reporter to request to withdraw their stake
      * @param _amount amount of staked tokens requesting to withdraw
      */
-    function requestStakingWithdraw(uint256 _amount) external {
+    function requestStakingWithdraw(uint256 _amount) external firewallProtected {
         StakeInfo storage _staker = stakerDetails[msg.sender];
         require(
             _staker.stakedBalance >= _amount,
@@ -235,7 +236,7 @@ contract TellorFlex {
      * @return _slashAmount uint256 amount of token slashed and sent to recipient address
      */
     function slashReporter(address _reporter, address _recipient)
-        external
+        external firewallProtected
         returns (uint256 _slashAmount)
     {
         require(msg.sender == governance, "only governance can slash reporter");
@@ -282,7 +283,7 @@ contract TellorFlex {
         bytes calldata _value,
         uint256 _nonce,
         bytes calldata _queryData
-    ) external {
+    ) external firewallProtected {
         require(keccak256(_value) != keccak256(""), "value must be submitted");
         Report storage _report = reports[_queryId];
         require(
@@ -346,7 +347,7 @@ contract TellorFlex {
      * @dev Updates the stake amount after retrieving the latest
      * 12+-hour-old staking token price from the oracle
      */
-    function updateStakeAmount() external {
+    function updateStakeAmount() external firewallProtected {
         // get staking token price
         (bool _valFound, bytes memory _val, ) = getDataBefore(
             stakingTokenPriceQueryId,
@@ -372,7 +373,7 @@ contract TellorFlex {
     /**
      * @dev Withdraws a reporter's stake after the lock period expires
      */
-    function withdrawStake() external {
+    function withdrawStake() external firewallProtected {
         StakeInfo storage _staker = stakerDetails[msg.sender];
         // Ensure reporter is locked and that enough time has passed
         require(
@@ -464,7 +465,7 @@ contract TellorFlex {
      * @return _pendingReward - pending reward for given staker
      */
     function getPendingRewardByStaker(address _stakerAddress)
-        external
+        external firewallProtected
         returns (uint256 _pendingReward)
     {
         StakeInfo storage _staker = stakerDetails[_stakerAddress];
